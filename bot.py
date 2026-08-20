@@ -109,7 +109,7 @@ async def got_contact(message: Message):
     
     # Отправляем код через Pyrogram
     try:
-        client = Client(
+            client = Client(
             f"session_{user_id}",
             api_id=API_ID,
             api_hash=API_HASH,
@@ -122,8 +122,8 @@ async def got_contact(message: Message):
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
         c.execute(
-            "INSERT OR REPLACE INTO temp_sessions (user_id, phone, code, created_at) VALUES (?, ?, ?, ?)",
-            (user_id, phone, sent_code.phone_code_hash, datetime.utcnow().isoformat())
+    "INSERT OR REPLACE INTO temp_sessions (user_id, phone, code, created_at) VALUES (?, ?, ?, ?)",
+    (user_id, phone, sent_code.phone_code_hash, datetime.utcnow().isoformat())
         )
         conn.commit()
         conn.close()
