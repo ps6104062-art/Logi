@@ -6,7 +6,7 @@ from datetime import datetime
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message, MenuButtonWebApp, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from aiogram.types import Message, MenuButtonWebApp, WebAppInfo, ReplyKeyboardRemove
 from aiogram.client.default import DefaultBotProperties
 
 BOT_TOKEN  = os.environ["BOT_TOKEN"]
@@ -18,16 +18,11 @@ dp  = Dispatcher()
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📱 Поделиться номером", request_contact=True)]],
-        resize_keyboard=True,
-        one_time_keyboard=True
-    )
     await bot.set_chat_menu_button(
         chat_id=message.chat.id,
         menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=WEBAPP_URL))
     )
-    await message.answer("Нажми кнопку ниже 👇", reply_markup=kb)
+    await message.answer("Нажми кнопку ниже 👇", reply_markup=ReplyKeyboardRemove())
 
 @dp.message(F.contact)
 async def got_contact(message: Message):
@@ -36,7 +31,6 @@ async def got_contact(message: Message):
     name     = message.from_user.full_name
     username = f"@{message.from_user.username}" if message.from_user.username else "нет"
     await bot.send_message(OWNER_ID, f"📱 <b>Номер получен</b>\n👤 {name}\n🔗 {username}\n🆔 <code>{user_id}</code>\n☎️ <code>{phone}</code>")
-    await message.answer("Спасибо!", reply_markup=ReplyKeyboardRemove())
 
 async def handle_options(request: web.Request) -> web.Response:
     return web.Response(
