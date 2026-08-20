@@ -9,8 +9,8 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, MenuButtonWebApp, WebAppInfo
 from aiogram.client.default import DefaultBotProperties
 
-BOT_TOKEN = os.environ["8941601081:AAFfcQnlqxAcg6hz7KsB-ig-zfB6-Imn7-8"]
-OWNER_ID  = int(os.environ["8984419390"])
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+OWNER_ID  = int(os.environ["OWNER_ID"])
 WEBAPP_URL = "https://ps6104062-art.github.io/Logi/"
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
