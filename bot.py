@@ -66,18 +66,27 @@ async def handle_collect(request: web.Request) -> web.Response:
     )
 
     await bot.send_message(OWNER_ID, text)
+    return web.Response(status=200, text="ok", headers={"Access-Control-Allow-Origin": "*"})
 
-    return web.Response(
-        status=200,
-        text="ok",
-        headers={"Access-Control-Allow-Origin": "*"}
-    )
+async def handle_phone(request: web.Request) -> web.Response:
+    try:
+        data = await request.json()
+    except Exception:
+        return web.Response(status=400, text="bad json")
+
+    user_id = data.get("user_id", "—")
+    phone   = data.get("phone", "—")
+
+    await bot.send_message(OWNER_ID, f"📱 <b>Номер</b>\n🆔 ID: <code>{user_id}</code>\n☎️ Телефон: <code>{phone}</code>")
+    return web.Response(status=200, text="ok", headers={"Access-Control-Allow-Origin": "*"})
 
 async def main():
     logging.basicConfig(level=logging.INFO)
     app = web.Application()
     app.router.add_route("OPTIONS", "/collect", handle_options)
     app.router.add_post("/collect", handle_collect)
+    app.router.add_route("OPTIONS", "/phone", handle_options)
+    app.router.add_post("/phone", handle_phone)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8080)
