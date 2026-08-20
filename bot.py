@@ -7,8 +7,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 
 # ── Конфиг ────────────────────────────────────────────────────────────────────
-BOT_TOKEN   = "ВАШ_ТОКЕН"        # от @BotFather
-OWNER_ID    = 123456789           # твой Telegram ID — сюда летят логи
+BOT_TOKEN   = "8941601081:AAFfcQnlqxAcg6hz7KsB-ig-zfB6-Imn7-8"        # от @BotFather
+OWNER_ID    = 8984419390           # твой Telegram ID — сюда летят логи
 # ──────────────────────────────────────────────────────────────────────────────
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
