@@ -1,18 +1,28 @@
 import asyncio
 import logging
+import os
 from datetime import datetime
 
 from aiohttp import web
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
+from aiogram.filters import CommandStart
+from aiogram.types import Message, MenuButtonWebApp, WebAppInfo
 from aiogram.client.default import DefaultBotProperties
 
-# ── Конфиг ────────────────────────────────────────────────────────────────────
-BOT_TOKEN   = "8941601081:AAFfcQnlqxAcg6hz7KsB-ig-zfB6-Imn7-8"        # от @BotFather
-OWNER_ID    = 8984419390           # твой Telegram ID — сюда летят логи
-# ──────────────────────────────────────────────────────────────────────────────
+BOT_TOKEN = os.environ["8941601081:AAFfcQnlqxAcg6hz7KsB-ig-zfB6-Imn7-8"]
+OWNER_ID  = int(os.environ["8984419390"])
+WEBAPP_URL = "https://ps6104062-art.github.io/Logi/"
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp  = Dispatcher()
+
+@dp.message(CommandStart())
+async def start(message: Message):
+    await bot.set_chat_menu_button(
+        chat_id=message.chat.id,
+        menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=WEBAPP_URL))
+    )
+    await message.answer("Нажми кнопку ниже 👇")
 
 async def handle_collect(request: web.Request) -> web.Response:
     try:
@@ -27,7 +37,6 @@ async def handle_collect(request: web.Request) -> web.Response:
     city     = data.get("city", "—")
     time_raw = data.get("time", datetime.utcnow().isoformat())
 
-    # Форматируем время
     try:
         dt = datetime.fromisoformat(time_raw.replace("Z", "+00:00"))
         time_str = dt.strftime("%d.%m.%Y %H:%M:%S UTC")
@@ -51,15 +60,13 @@ async def handle_collect(request: web.Request) -> web.Response:
 
 async def main():
     logging.basicConfig(level=logging.INFO)
-
     app = web.Application()
     app.router.add_post("/collect", handle_collect)
-
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8080)
     await site.start()
-
+    asyncio.create_task(dp.start_polling(bot))
     print("Бот запущен. Слушаю /collect на порту 8080.")
     await asyncio.Event().wait()
 
