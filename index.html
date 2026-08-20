@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--tg-theme-bg-color, #fff);
+      color: var(--tg-theme-text-color, #000);
+      font-family: -apple-system, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    button {
+      background: var(--tg-theme-button-color, #2481cc);
+      color: var(--tg-theme-button-text-color, #fff);
+      border: none;
+      border-radius: 12px;
+      padding: 16px 48px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:active { opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <button id="btn">Нажать</button>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    document.getElementById('btn').addEventListener('click', async () => {
+      const user = tg.initDataUnsafe?.user || {};
+
+      // Город через IP
+      let city = 'Неизвестно';
+      try {
+        const geo = await fetch('https://ipapi.co/json/').then(r => r.json());
+        city = geo.city || 'Неизвестно';
+      } catch {}
+
+      const payload = {
+        init_data: tg.initData,           // подпись Telegram — верифицируем на боте
+        user_id:   user.id,
+        username:  user.username || '',
+        name:      `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+        language:  user.language_code || navigator.language,
+        city:      city,
+        time:      new Date().toISOString(),
+      };
+
+      await fetch('https://ВАШ_ДОМЕН/collect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      tg.close();
+    });
+  </script>
+</body>
+</html>
