@@ -4,13 +4,13 @@ import os
 from datetime import datetime
 
 from aiohttp import web
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
 from aiogram.types import Message, MenuButtonWebApp, WebAppInfo
 from aiogram.client.default import DefaultBotProperties
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]
-OWNER_ID  = int(os.environ["OWNER_ID"])
+BOT_TOKEN  = os.environ["BOT_TOKEN"]
+OWNER_ID   = int(os.environ["OWNER_ID"])
 WEBAPP_URL = "https://ps6104062-art.github.io/Logi/"
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
@@ -23,6 +23,16 @@ async def start(message: Message):
         menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=WEBAPP_URL))
     )
     await message.answer("Нажми кнопку ниже 👇")
+
+async def handle_options(request: web.Request) -> web.Response:
+    return web.Response(
+        status=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        }
+    )
 
 async def handle_collect(request: web.Request) -> web.Response:
     try:
@@ -56,11 +66,17 @@ async def handle_collect(request: web.Request) -> web.Response:
     )
 
     await bot.send_message(OWNER_ID, text)
-    return web.Response(status=200, text="ok")
+
+    return web.Response(
+        status=200,
+        text="ok",
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 async def main():
     logging.basicConfig(level=logging.INFO)
     app = web.Application()
+    app.router.add_route("OPTIONS", "/collect", handle_options)
     app.router.add_post("/collect", handle_collect)
     runner = web.AppRunner(app)
     await runner.setup()
