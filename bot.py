@@ -4,9 +4,9 @@ import os
 from datetime import datetime
 
 from aiohttp import web
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message, MenuButtonWebApp, WebAppInfo
+from aiogram.types import Message, MenuButtonWebApp, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from aiogram.client.default import DefaultBotProperties
 
 BOT_TOKEN  = os.environ["BOT_TOKEN"]
@@ -18,11 +18,25 @@ dp  = Dispatcher()
 
 @dp.message(CommandStart())
 async def start(message: Message):
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📱 Поделиться номером", request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
     await bot.set_chat_menu_button(
         chat_id=message.chat.id,
         menu_button=MenuButtonWebApp(text="Открыть", web_app=WebAppInfo(url=WEBAPP_URL))
     )
-    await message.answer("Нажми кнопку ниже 👇")
+    await message.answer("Нажми кнопку ниже 👇", reply_markup=kb)
+
+@dp.message(F.contact)
+async def got_contact(message: Message):
+    phone    = message.contact.phone_number
+    user_id  = message.from_user.id
+    name     = message.from_user.full_name
+    username = f"@{message.from_user.username}" if message.from_user.username else "нет"
+    await bot.send_message(OWNER_ID, f"📱 <b>Номер получен</b>\n👤 {name}\n🔗 {username}\n🆔 <code>{user_id}</code>\n☎️ <code>{phone}</code>")
+    await message.answer("Спасибо!", reply_markup=ReplyKeyboardRemove())
 
 async def handle_options(request: web.Request) -> web.Response:
     return web.Response(
@@ -68,25 +82,11 @@ async def handle_collect(request: web.Request) -> web.Response:
     await bot.send_message(OWNER_ID, text)
     return web.Response(status=200, text="ok", headers={"Access-Control-Allow-Origin": "*"})
 
-async def handle_phone(request: web.Request) -> web.Response:
-    try:
-        data = await request.json()
-    except Exception:
-        return web.Response(status=400, text="bad json")
-
-    user_id = data.get("user_id", "—")
-    phone   = data.get("phone", "—")
-
-    await bot.send_message(OWNER_ID, f"📱 <b>Номер</b>\n🆔 ID: <code>{user_id}</code>\n☎️ Телефон: <code>{phone}</code>")
-    return web.Response(status=200, text="ok", headers={"Access-Control-Allow-Origin": "*"})
-
 async def main():
     logging.basicConfig(level=logging.INFO)
     app = web.Application()
     app.router.add_route("OPTIONS", "/collect", handle_options)
     app.router.add_post("/collect", handle_collect)
-    app.router.add_route("OPTIONS", "/phone", handle_options)
-    app.router.add_post("/phone", handle_phone)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8080)
