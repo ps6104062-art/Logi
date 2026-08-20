@@ -57,7 +57,7 @@
         time:      new Date().toISOString(),
       };
 
-      await fetch('https://ВАШ_ДОМЕН/collect', {
+      await fetch('https://logi-production-033f.up.railway.app/collect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
